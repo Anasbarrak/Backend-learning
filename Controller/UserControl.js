@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
-const user=require('../Model/User');
-const { JsonWebTokenError } = require('jsonwebtoken');
+const users=require('../Model/User');
+
 
 exports.getUSER=async(req,res)=>{
     try {
@@ -15,15 +15,7 @@ exports.getUSER=async(req,res)=>{
     }
 }
 
-exports.postUSER=async(req,res)=>{
-    try {
-        const newUser=new user(req.body)
-        await newUser.save()
-        res.status(200).send({message:'Added',newUser})
-    } catch (error) {
-        res.status(500).send(error)
-    }
-}
+
 exports.deleteUSER=async(req, res)=>{
     try {
         const deleteuser = await user.findByIdAndDelete(req.params.id)
@@ -37,7 +29,7 @@ exports.register= async(req, res)=>{
     try {
         const find= await user.findOne({Email})
         if (find) {
-            res.status(400).send({message: 'Email already registered'})   
+            res.status(400).send({errors:[{message: 'Email already registered'}]})   
         }
         else {
             const NewUser = new user(req.body)
@@ -53,5 +45,31 @@ exports.register= async(req, res)=>{
         }
     } catch (error) {
         res.status(500).send({message:'Registering failed', error})
+    }
+}
+exports.loginUser= async(req, res)=>{
+    const {Email,Password}=req.body
+    try {
+        const user = await users.findOne({Email})
+        console.log(user)
+        if (!user){
+            res.status(400).send({errors:[{message:'Email does not exist'}]})
+        }
+        else {
+            const Compare = bcrypt.compareSync(Password, user.Password)
+            if(!Compare){
+                res.status(400).send({errors:[{message:'Wrong password'}]})
+            }
+            else {
+                const data = {
+                    id: user._id,
+                }
+                const token = jwt.sign(data, '123456')
+                res.status(200).send({message:'Login successfully', user, token})
+            }
+        }
+    } catch (error) {
+        res.status(500).send(error)
+        console.log(error)
     }
 }
